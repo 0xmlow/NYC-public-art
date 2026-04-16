@@ -2,7 +2,7 @@
 
 A narrative cartography of New York City's public art — an interactive field guide to **1,436 current and historical public artworks** across all five boroughs, built with Mapbox GL JS.
 
-**Live site:** _(add your GitHub Pages URL here once deployed)_
+**Live site:** https://0xmlow.github.io/NYC-public-art/
 
 ## What it is
 
