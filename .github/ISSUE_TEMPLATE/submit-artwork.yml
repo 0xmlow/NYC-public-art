@@ -1,0 +1,114 @@
+name: 🎨 Submit an artwork
+description: Propose a new public artwork for the Painted City map.
+title: "[Submission] <title> by <artist>"
+labels: ["submission", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing! Fill in what you know. Incomplete submissions
+        are still welcome — a maintainer will research the rest.
+
+  - type: input
+    id: title
+    attributes:
+      label: Title of the work
+      placeholder: "Charging Bull"
+    validations:
+      required: true
+
+  - type: input
+    id: artist
+    attributes:
+      label: Artist(s)
+      placeholder: "Arturo Di Modica"
+    validations:
+      required: true
+
+  - type: input
+    id: year
+    attributes:
+      label: Year installed (or circa)
+      placeholder: "1989"
+
+  - type: dropdown
+    id: borough
+    attributes:
+      label: Borough
+      options:
+        - Manhattan
+        - Brooklyn
+        - Queens
+        - Bronx
+        - Staten Island
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Sculpture
+        - Mural
+        - Installation
+        - Plaque
+        - Fountain
+        - Relief
+        - Signage
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Address / location name
+      placeholder: "Bowling Green, Financial District"
+    validations:
+      required: true
+
+  - type: input
+    id: coords
+    attributes:
+      label: Coordinates (lat, lon)
+      description: "Drop a pin on Google Maps, right-click, copy the decimal coords."
+      placeholder: "40.7055, -74.0134"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description / story
+      placeholder: "A 7,100-pound bronze bull, dropped outside the NYSE overnight in 1989 as a guerilla response to the '87 crash..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: statement
+    attributes:
+      label: Artist statement (optional)
+      placeholder: "“I wanted to make something that people could touch, that would become part of their daily lives.”"
+
+  - type: input
+    id: image_url
+    attributes:
+      label: Image URL (optional)
+      description: "Wikimedia Commons, Flickr (CC-licensed), or a direct https:// link to a photo."
+      placeholder: "https://upload.wikimedia.org/..."
+
+  - type: input
+    id: source_link
+    attributes:
+      label: Source / further reading URL (optional)
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm
+      options:
+        - label: The artwork is installed in public space (not inside a private gallery).
+          required: true
+        - label: I have permission to share any photos I've linked, or the photos are from Wikimedia Commons / other open-license source.
+          required: true

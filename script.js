@@ -4,6 +4,7 @@
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiMHhtbG93IiwiYSI6ImNtbzF2N2g0dDAxd2gyb3Buc3NyaGw5OG4ifQ.VKV6k6ioa2qvD2o5q3WOcg';
 const DATA_URL = 'data/artworks.json';
+const MASK_URL = 'data/nyc_mask.json';
 
 // ------------------------------------------------------------
 // Blossom icons + color-coding per category
@@ -424,6 +425,50 @@ async function loadAllIcons() {
 }
 
 // ------------------------------------------------------------
+// NYC spotlight mask — dims everything outside the five boroughs.
+// ------------------------------------------------------------
+async function addNycMask() {
+  try {
+    const res = await fetch(MASK_URL);
+    if (!res.ok) throw new Error('mask fetch ' + res.status);
+    const fc = await res.json();
+    state.map.addSource('nyc-mask', { type: 'geojson', data: fc });
+    state.map.addLayer({
+      id: 'nyc-mask',
+      type: 'fill',
+      source: 'nyc-mask',
+      paint: {
+        'fill-color': '#05060a',
+        'fill-opacity': [
+          'interpolate', ['linear'], ['zoom'],
+          9, 0.58,
+          12, 0.48,
+          15, 0.38
+        ],
+        'fill-antialias': true
+      }
+    });
+    // Subtle glowing outline around NYC boundary
+    state.map.addLayer({
+      id: 'nyc-outline',
+      type: 'line',
+      source: 'nyc-mask',
+      paint: {
+        'line-color': 'rgba(255, 184, 77, 0.35)',
+        'line-width': [
+          'interpolate', ['linear'], ['zoom'],
+          9, 1.2,
+          14, 2.4
+        ],
+        'line-blur': 0.6
+      }
+    });
+  } catch (err) {
+    console.warn('NYC mask failed to load (continuing without):', err);
+  }
+}
+
+// ------------------------------------------------------------
 // Build the Mapbox source + clustered layers
 // ------------------------------------------------------------
 function buildMapLayers() {
@@ -616,6 +661,7 @@ async function init() {
 
   state.map.on('load', async () => {
     await loadAllIcons();
+    await addNycMask();
     buildMapLayers();
     applyFilters();
     bindUI();

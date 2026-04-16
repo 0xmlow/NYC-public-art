@@ -565,18 +565,49 @@ CURATED = [
 # ------------------------------------------------------------------
 # Merge + deduplicate
 # ------------------------------------------------------------------
+def load_community_additions():
+    """Merge in community-submitted entries from data/community_additions.json.
+
+    Maintainers add entries here after reviewing issues filed via the
+    'Submit an artwork' GitHub Issue template. Each record follows the same
+    shape as CURATED entries (title, artist, lon, lat, type, borough, ...).
+    """
+    path = DATA_DIR / "community_additions.json"
+    if not path.exists():
+        return []
+    try:
+        raw = json.loads(path.read_text())
+    except Exception as e:
+        print(f"  ! could not parse community_additions.json: {e}")
+        return []
+    out = []
+    for i, rec in enumerate(raw):
+        # Sanity: must have title + coords
+        if not rec.get("title") or rec.get("lon") is None or rec.get("lat") is None:
+            continue
+        rec = dict(rec)  # shallow copy
+        rec.setdefault("id", f"community-{i}")
+        rec.setdefault("source", "Community")
+        rec.setdefault("borough", "")
+        rec.setdefault("type", "Other")
+        out.append(rec)
+    return out
+
+
 def merge_all():
     parks = load_parks_monuments()
     dot = load_dot_art()
+    community = load_community_additions()
     print(f"Parks monuments: {len(parks)}")
     print(f"DOT art: {len(dot)}")
     print(f"Curated: {len(CURATED)}")
+    print(f"Community: {len(community)}")
 
     # Deduplicate curated against parks by title match
     curated_titles = {c["title"].lower() for c in CURATED}
     parks_filtered = [p for p in parks if p["title"].lower() not in curated_titles]
 
-    all_items = CURATED + parks_filtered + dot
+    all_items = CURATED + community + parks_filtered + dot
 
     # Dedupe only exact duplicates (same title at same exact 6-decimal coord)
     seen = set()
@@ -588,14 +619,16 @@ def merge_all():
         seen.add(key)
         unique.append(it)
 
-    # Sort: curated first, then parks, then dot
+    # Sort: curated first, then community, then parks, then dot
     def sort_key(it):
         src = it.get("source", "")
         if src == "Curated":
             return (0, it["title"])
-        if "Parks" in src:
+        if src == "Community":
             return (1, it["title"])
-        return (2, it["title"])
+        if "Parks" in src:
+            return (2, it["title"])
+        return (3, it["title"])
 
     unique.sort(key=sort_key)
     print(f"Total unique: {len(unique)}")

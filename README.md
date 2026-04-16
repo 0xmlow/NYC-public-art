@@ -38,6 +38,30 @@ pip install pyproj openpyxl requests
 python3 scripts/build_dataset.py
 ```
 
+## Keeping the dataset fresh
+
+Two channels feed new artwork into the map:
+
+### 1. Weekly automated refresh from NYC Open Data
+
+A GitHub Actions workflow (`.github/workflows/update-data.yml`) runs every **Monday at 07:00 UTC**:
+1. Re-pulls the latest NYC Parks Monuments + DOT Art datasets
+2. Rebuilds the coordinate transform + merge (`scripts/build_dataset.py`)
+3. Rebuilds the NYC borough mask (`scripts/build_mask.py`)
+4. Enriches new entries with Wikipedia / Commons thumbnails (`scripts/enrich_images.py`)
+5. Commits and pushes if anything changed — the live site updates automatically
+
+You can also trigger it manually from the **Actions** tab → *Refresh artworks dataset* → *Run workflow*.
+
+### 2. Community submissions via Issues
+
+Spotted a mural we're missing? An installation that just went up? Open an issue using the **🎨 Submit an artwork** template:
+- https://github.com/0xmlow/NYC-public-art/issues/new?template=submit-artwork.yml
+
+The form captures title, artist, coordinates, photo link, and description. A maintainer reviews the submission, adds it to `data/community_additions.json`, and the next rebuild (manual or scheduled) merges it into the live map.
+
+The schema of `community_additions.json` matches curated entries — an array of objects with `title`, `artist`, `year`, `borough`, `type`, `location`, `lon`, `lat`, `description`, and optionally `image_url`, `artist_statement`, `source_link`.
+
 ## Credits
 
 Built by MLow · 2026 · for GIS at NYU
