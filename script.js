@@ -620,7 +620,196 @@ async function init() {
     applyFilters();
     bindUI();
     $('loading').classList.add('hidden');
+
+    // Auto-run demo tour if ?demo=1 in URL
+    if (new URLSearchParams(location.search).get('demo') === '1') {
+      setTimeout(() => runDemo(), 600);
+    }
   });
 }
+
+// ============================================================
+// DEMO MODE — auto-tour through every feature
+// ============================================================
+const DEMO = { active: false, abort: false };
+
+function wait(ms) {
+  return new Promise(res => {
+    const t = setTimeout(res, ms);
+    if (DEMO.abort) { clearTimeout(t); res(); }
+  });
+}
+
+function showCaption(title, sub = '', ms = 0) {
+  const el = $('demoCaption');
+  el.innerHTML = `${escapeHtml(title)}${sub ? `<span class="sub">${escapeHtml(sub)}</span>` : ''}`;
+  el.classList.add('visible');
+  if (ms > 0) {
+    setTimeout(() => el.classList.remove('visible'), ms);
+  }
+}
+function hideCaption() {
+  $('demoCaption').classList.remove('visible');
+}
+
+function setTypeFilter(type) {
+  document.querySelectorAll('#typeChips .chip').forEach(c =>
+    c.classList.toggle('active', c.getAttribute('data-type') === type));
+  state.type = type;
+  applyFilters();
+}
+function setBoroughFilter(b) {
+  document.querySelectorAll('#boroughChips .chip').forEach(c =>
+    c.classList.toggle('active', c.getAttribute('data-borough') === b));
+  state.borough = b;
+  applyFilters();
+}
+function resetFilters() {
+  setTypeFilter('All');
+  setBoroughFilter('All');
+  $('search').value = '';
+  state.query = '';
+  $('clearSearch').classList.remove('visible');
+  applyFilters();
+}
+
+async function typeInSearch(text, delayMs = 55) {
+  const el = $('search');
+  el.focus();
+  el.value = '';
+  state.query = '';
+  for (let i = 1; i <= text.length; i++) {
+    if (DEMO.abort) return;
+    el.value = text.slice(0, i);
+    state.query = el.value;
+    $('clearSearch').classList.toggle('visible', !!state.query);
+    applyFilters();
+    await wait(delayMs);
+  }
+}
+
+function findByTitle(substr) {
+  const s = substr.toLowerCase();
+  return state.artworks.find(a => a.title && a.title.toLowerCase().includes(s));
+}
+
+async function runDemo() {
+  if (DEMO.active) return;
+  DEMO.active = true;
+  DEMO.abort = false;
+  document.body.classList.add('demo-mode');
+  $('demoBadge').classList.add('visible');
+
+  const esc = (e) => { if (e.key === 'Escape') stopDemo(); };
+  document.addEventListener('keydown', esc);
+
+  try {
+    // ---------- 1. Intro card (4s) ----------
+    showCaption('Painted City', 'A narrative cartography of NYC public art');
+    await wait(3500);
+    hideCaption();
+    await wait(300);
+
+    // ---------- 2. Enter gallery — cinematic flyTo ----------
+    showCaption('1,436 artworks. 5 boroughs.', 'One interactive field guide.');
+    enterGallery();
+    await wait(3600);
+    hideCaption();
+    await wait(300);
+
+    // Settle over Manhattan (enterGallery's second flyTo lands at ~7.5s total)
+    await wait(4200);
+
+    // ---------- 3. Zoom to reveal color-coded Blossom pins ----------
+    showCaption('Color-coded by type', 'Sculpture · Mural · Installation · Plaque · Fountain · Relief', 5000);
+    state.map.flyTo({
+      center: [-73.9857, 40.7580],
+      zoom: 14.2,
+      pitch: 55,
+      bearing: -12,
+      duration: 3500,
+      essential: true
+    });
+    await wait(4200);
+
+    // ---------- 4. Open a curated piece with image + artist statement ----------
+    hideCaption();
+    const bull = findByTitle('Charging Bull');
+    if (bull) {
+      showCaption('Click a pin', 'Full image · artist statement · metadata', 3500);
+      selectArtwork(bull.id, { fly: true });
+      await wait(5000);
+      hideDetail();
+    }
+
+    // ---------- 5. Crack is Wack in Harlem ----------
+    const crack = findByTitle('Crack is Wack');
+    if (crack) {
+      selectArtwork(crack.id, { fly: true });
+      await wait(1200);
+      showCaption('Keith Haring, 1986', 'Crack is Wack · 128th & 2nd', 4200);
+      await wait(4500);
+      hideDetail();
+    }
+
+    // ---------- 6. Filter chips ----------
+    state.map.flyTo({ center: [-73.95, 40.72], zoom: 12.3, pitch: 35, bearing: 0, duration: 2000 });
+    await wait(1800);
+    showCaption('Filter by type', 'Instant color-coded clusters', 3500);
+    setTypeFilter('Mural');
+    await wait(3700);
+
+    // ---------- 7. Full-text search ----------
+    hideCaption();
+    resetFilters();
+    await wait(400);
+    showCaption('Search across everything', 'title · artist · borough · year', 4200);
+    await typeInSearch('Haring');
+    await wait(2600);
+
+    // ---------- 8. Borough filter + surprise ----------
+    hideCaption();
+    resetFilters();
+    await wait(300);
+    showCaption('Browse one borough', 'Bronx', 3000);
+    setBoroughFilter('Bronx');
+    state.map.flyTo({ center: [-73.87, 40.84], zoom: 11.8, pitch: 45, bearing: 0, duration: 2200 });
+    await wait(3200);
+
+    // ---------- 9. Surprise me ----------
+    hideCaption();
+    resetFilters();
+    await wait(300);
+    showCaption('Shuffle', 'Surprise me', 2500);
+    surpriseMe();
+    await wait(4500);
+
+    // ---------- 10. Outro ----------
+    hideDetail();
+    state.map.flyTo({ center: [-74.00, 40.72], zoom: 10.4, pitch: 50, bearing: 22, duration: 3000 });
+    await wait(1200);
+    showCaption('Painted City', '0xmlow.github.io/NYC-public-art');
+    await wait(4500);
+    hideCaption();
+
+  } finally {
+    document.removeEventListener('keydown', esc);
+    document.body.classList.remove('demo-mode');
+    $('demoBadge').classList.remove('visible');
+    DEMO.active = false;
+  }
+}
+
+function stopDemo() {
+  DEMO.abort = true;
+  hideCaption();
+  $('demoBadge').classList.remove('visible');
+  document.body.classList.remove('demo-mode');
+  DEMO.active = false;
+}
+
+// expose for manual trigger from console
+window.runDemo = runDemo;
+window.stopDemo = stopDemo;
 
 init();
