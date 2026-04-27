@@ -16,6 +16,7 @@ import csv
 import json
 import re
 import os
+import urllib.parse
 from pathlib import Path
 from pyproj import Transformer
 from openpyxl import Workbook
@@ -190,7 +191,14 @@ def load_parks_monuments():
                 "inscription": clean(row.get("inscribed"))[:500],
                 "status": status,
                 "image_url": "",
-                "source_link": "https://www.nycgovparks.org/art-and-antiquities",
+                # Wikipedia search URL — far more useful than a generic
+                # parks index, and avoids 403 issues from nycgovparks.org's
+                # bot-detection. Lands on the article if one exists, or
+                # search results otherwise.
+                "source_link": (
+                    "https://en.wikipedia.org/w/index.php?search="
+                    + urllib.parse.quote(f"{title} {artist} New York".strip())
+                ),
             })
     return items
 
@@ -263,7 +271,10 @@ def load_dot_art():
                 "inscription": "",
                 "status": "Extant" if not rem_date else "Temporary / Removed",
                 "image_url": "",
-                "source_link": "https://www.nyc.gov/urbanart",
+                "source_link": (
+                    "https://en.wikipedia.org/w/index.php?search="
+                    + urllib.parse.quote(f"{title} {artist} New York".strip())
+                ),
             })
     return items
 

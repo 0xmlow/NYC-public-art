@@ -255,10 +255,23 @@ function showDetail(art) {
   if (art.source)       rows.push(['Source', art.source]);
   meta.innerHTML = rows.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('');
 
+  // Source link: label adapts to where the link points so the user
+  // knows what to expect when they click.
   const link = $('detailSource');
   if (art.source_link) {
     link.href = art.source_link;
     link.style.display = 'inline-block';
+    let label = 'View source ↗';
+    if (art.source_link.includes('wikipedia.org/w/index.php?search=')) {
+      label = 'Look up on Wikipedia ↗';
+    } else if (art.source_link.includes('wikipedia.org/wiki/')) {
+      label = 'Read on Wikipedia ↗';
+    } else if (art.source_link.includes('thehighline.org')) {
+      label = 'View on The High Line ↗';
+    } else if (art.source_link.includes('nycgovparks.org')) {
+      label = 'View on NYC Parks ↗';
+    }
+    link.textContent = label;
   } else {
     link.style.display = 'none';
   }
