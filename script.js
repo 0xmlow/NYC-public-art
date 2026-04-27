@@ -262,7 +262,9 @@ function showDetail(art) {
     link.href = art.source_link;
     link.style.display = 'inline-block';
     let label = 'View source ↗';
-    if (art.source_link.includes('wikipedia.org/w/index.php?search=')) {
+    if (art.source_link.includes('google.com/search')) {
+      label = 'Search the web ↗';
+    } else if (art.source_link.includes('wikipedia.org/w/index.php?search=')) {
       label = 'Look up on Wikipedia ↗';
     } else if (art.source_link.includes('wikipedia.org/wiki/')) {
       label = 'Read on Wikipedia ↗';

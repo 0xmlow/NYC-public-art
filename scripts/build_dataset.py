@@ -98,6 +98,20 @@ def in_nyc(lon, lat):
     return NYC_BBOX[0] <= lon <= NYC_BBOX[2] and NYC_BBOX[1] <= lat <= NYC_BBOX[3]
 
 
+def _google_search_url(title, artist):
+    """Build a Google search URL for an artwork. Used as the primary
+    'View source' target for non-curated entries — Google reliably
+    surfaces Wikipedia / Parks / news / image results, where Wikipedia's
+    strict full-text search would 0-result on obscure monuments."""
+    parts = [(title or "").strip()]
+    a = (artist or "").strip()
+    if a and a.lower() != "unknown artist":
+        parts.append(a)
+    parts.append("NYC public art")
+    q = " ".join(p for p in parts if p)
+    return "https://www.google.com/search?q=" + urllib.parse.quote(q)
+
+
 # ------------------------------------------------------------------
 # 1. NYC Parks Monuments
 # ------------------------------------------------------------------
@@ -202,12 +216,13 @@ def load_parks_monuments():
                 "inscription": clean(row.get("inscribed"))[:500],
                 "status": status,
                 "image_url": "",
-                # Primary "View source" target — Wikipedia search.
-                # Always lands somewhere useful regardless of upstream uptime.
-                "source_link": (
-                    "https://en.wikipedia.org/w/index.php?search="
-                    + urllib.parse.quote(f"{name} {artist} New York".strip())
-                ),
+                # Primary "View source" target — Google search.
+                # Google reliably surfaces the Wikipedia article (when one
+                # exists), the NYC Parks page, news coverage, and image
+                # results, so it's a more useful default than Wikipedia's
+                # strict full-text search for obscure monuments. We drop
+                # 'Unknown artist' from the query because it tanks recall.
+                "source_link": _google_search_url(name, artist),
                 # Secondary fallback — official NYC Parks per-monument page.
                 "parks_link": parks_link,
             })
@@ -282,10 +297,7 @@ def load_dot_art():
                 "inscription": "",
                 "status": "Extant" if not rem_date else "Temporary / Removed",
                 "image_url": "",
-                "source_link": (
-                    "https://en.wikipedia.org/w/index.php?search="
-                    + urllib.parse.quote(f"{title} {artist} New York".strip())
-                ),
+                "source_link": _google_search_url(title, artist),
             })
     return items
 
