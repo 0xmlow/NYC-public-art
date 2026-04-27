@@ -1,9 +1,55 @@
 // ============================================================
-// PAINTED CITY — A Narrative Cartography of NYC's Urban Gallery
+// PAINTED CITY — Application Logic
+// ------------------------------------------------------------
+// All Mapbox + UI behavior lives in this single file:
+//
+//   1. CONFIG          — token, dataset URLs, type → icon/color tables
+//   2. STATE           — current filter/search selection
+//   3. DATA PIPELINE   — fetch artworks.json → convert each row into
+//                         a GeoJSON Feature → set as a Mapbox source
+//   4. MAP LAYERS      — three Mapbox layers driven by ONE GeoJSON
+//                         source (clustering does the splitting):
+//                           · clusters       (circle, paint expression
+//                             reads `point_count` for size + color)
+//                           · cluster-count  (symbol, label)
+//                           · points         (symbol, icon-image is
+//                             pulled from each feature's properties)
+//                         …plus a 'nyc-mask' fill layer (data-driven
+//                         opacity by zoom) and a '3d-buildings' fill-
+//                         extrusion layer for context.
+//   5. INTERACTIVITY   — click clusters to zoom, click pins to open
+//                         a detail panel, hover to preview a popup,
+//                         filter via chips, search via text input,
+//                         keyboard shortcuts, and an auto-tour mode.
+//   6. DEMO MODE       — `?demo=1` runs a scripted walkthrough so the
+//                         site can be screen-recorded for submission.
+//
+// GIS CONCEPTS USED (per assignment rubric):
+//   • GeoJSON loaded as a Mapbox `geojson` source
+//   • Multiple `circle` and `symbol` layers reading from that source
+//   • Clustering enabled at the source level (clusterRadius / clusterMaxZoom)
+//   • Data-driven styling via Mapbox expressions:
+//       - ['get', 'iconName']           → per-feature icon image
+//       - ['step', ['get','point_count'], …]  → cluster size / color
+//       - ['case', ['==', …], a, b]     → curated vs. non-curated styling
+//       - ['interpolate', ['linear'], ['zoom'], …]  → zoom-driven scaling
+//   • Camera control (flyTo) for guided exploration
+//   • DOM-driven UI sync with map state (chips ↔ source.setData())
 // ============================================================
 
+// --- 1. CONFIG ----------------------------------------------------
+
+// Mapbox public access token. This token is URL-restricted to this
+// repo's GitHub Pages origin via the Mapbox dashboard, so it's safe
+// to ship in client code (that's exactly what `pk.*` tokens are for).
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiMHhtbG93IiwiYSI6ImNtbzF2N2g0dDAxd2gyb3Buc3NyaGw5OG4ifQ.VKV6k6ioa2qvD2o5q3WOcg';
+
+// Path to the main GeoJSON source — an array of artwork records that
+// gets transformed into FeatureCollection at runtime via toFeature().
 const DATA_URL = 'data/artworks.json';
+
+// Path to the NYC borough mask polygon — used to dim everything
+// outside the five boroughs (the "spotlight" effect).
 const MASK_URL = 'data/nyc_mask.json';
 
 // ------------------------------------------------------------
@@ -471,23 +517,52 @@ async function addNycMask() {
 // ------------------------------------------------------------
 // Build the Mapbox source + clustered layers
 // ------------------------------------------------------------
+// This is where the GIS happens. We:
+//   1. Convert our flat array of artwork records into a GeoJSON
+//      FeatureCollection.
+//   2. Register it as a single Mapbox `geojson` source with
+//      clustering enabled — Mapbox handles all the spatial
+//      bucketing for us at every zoom level.
+//   3. Stack three layers on top of that one source. The same
+//      data drives all three; only the `filter` differs.
+// ------------------------------------------------------------
 function buildMapLayers() {
   const map = state.map;
 
+  // ── Build the FeatureCollection from our raw records ──
+  // Each record becomes a Feature with a Point geometry [lon, lat]
+  // and a properties bag that carries everything Mapbox expressions
+  // will need (id, title, type, iconName, color, curated flag).
   const fc = {
     type: 'FeatureCollection',
     features: state.artworks.map(toFeature)
   };
 
+  // ── Register the GeoJSON source ──
+  // cluster:true means Mapbox runs supercluster internally and
+  // emits cluster features (with point_count) at low zooms, then
+  // breaks them apart as the user zooms in. `clusterMaxZoom` is the
+  // last zoom level where clustering happens; above that, every
+  // feature is rendered individually.
   map.addSource('artworks', {
     type: 'geojson',
     data: fc,
     cluster: true,
-    clusterRadius: 42,
-    clusterMaxZoom: 14
+    clusterRadius: 42,    // px — points within 42px get bucketed
+    clusterMaxZoom: 14    // zoom 15+ shows individual pins
   });
 
-  // Cluster bubbles
+  // ── LAYER 1 of 3: cluster bubbles ──
+  // Renders the circles you see at low zoom.
+  // Filter: only features that have a `point_count` (i.e. clusters).
+  // Both `circle-color` and `circle-radius` are DATA-DRIVEN
+  // STEP expressions: they branch on the value of point_count.
+  // The `step` operator returns the input value paired with the
+  // largest step ≤ point_count.
+  //   <  10  →  amber, 16px
+  //  10–49  →  coral, 22px
+  //  50–199 →  pink,  30px
+  //  ≥ 200  →  lilac, 38px
   map.addLayer({
     id: 'clusters',
     type: 'circle',
@@ -512,6 +587,10 @@ function buildMapLayers() {
     }
   });
 
+  // ── LAYER 2 of 3: cluster count labels ──
+  // A symbol layer that draws the abbreviated number ("1.2k", "237")
+  // on top of each cluster bubble. `text-field` reads a property
+  // automatically computed by Mapbox's clusterer.
   map.addLayer({
     id: 'cluster-count',
     type: 'symbol',
@@ -525,7 +604,14 @@ function buildMapLayers() {
     paint: { 'text-color': '#0a0a0f' }
   });
 
-  // Unclustered points — now Blossom icons, color-coded per type
+  // ── LAYER 3 of 3: individual artwork pins ──
+  // Filter: features WITHOUT point_count (i.e. unclustered points).
+  // `icon-image` is data-driven — each feature carries an `iconName`
+  // property that resolves to one of the seven Blossom SVGs we
+  // pre-loaded into the map's image registry (loadAllIcons()).
+  // `icon-size` interpolates linearly on zoom AND on the curated
+  // flag — curated picks render ~50% larger so they pop out of
+  // the noise.
   map.addLayer({
     id: 'points',
     type: 'symbol',
@@ -539,8 +625,10 @@ function buildMapLayers() {
         14, ['case', ['==', ['get', 'curated'], 1], 0.36, 0.24],
         18, ['case', ['==', ['get', 'curated'], 1], 0.54, 0.38]
       ],
-      'icon-allow-overlap': true,
+      'icon-allow-overlap': true,    // don't hide pins that touch
       'icon-ignore-placement': false,
+      // Curated artworks sort to the top so they render over the
+      // crowd of NYC-Parks plaques and DOT public-art markers.
       'symbol-sort-key': ['case', ['==', ['get', 'curated'], 1], 1, 0]
     },
     paint: {

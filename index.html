@@ -1,20 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- ============================================================
+       PAINTED CITY · NYC PUBLIC ART MAP
+       Built for: Advanced GIS · Interactive Web Mapping (NYU, SP26)
+       Author:    MLow · 2026
+       Stack:     Mapbox GL JS v3.8 + vanilla HTML / CSS / JS
+
+       ARCHITECTURE OVERVIEW
+       ─────────────────────
+       index.html  →  static layout & DOM scaffolding (this file)
+       style.css   →  visual design (dark theme, type-coded colors,
+                       responsive sidebar, animated intro)
+       script.js   →  Mapbox map, GeoJSON sources/layers, search +
+                       filter logic, detail panel, demo mode
+       data/       →  artworks.json  (1,436 features, the core dataset)
+                       nyc_mask.json  (5-borough boundary mask)
+                       painted_city_dataset.xlsx (same as JSON, in
+                       spreadsheet form, for inspection / hand-off)
+       icons/      →  7 monochrome Blossom-brand SVGs used as
+                       category-coded map pins (recolored at runtime)
+       ============================================================ -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Title + meta drive the SEO snippet, browser tab, and social previews -->
   <title>Painted City — A Narrative Cartography of New York's Urban Gallery</title>
   <meta name="description" content="An interactive field guide to 1,400+ current and historical public artworks across all five boroughs of New York City." />
+
+  <!-- External stylesheets:
+         1. Mapbox GL JS's own CSS — required for popups, controls, attribution
+         2. Google Fonts — Fraunces (display serif), Space Grotesk (UI sans),
+            Space Mono (eyebrow / metadata captions)
+         3. Our custom style.css — must come after Mapbox so we can override
+            its default control colors -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- MAP -->
+  <!-- ============================================================
+       1. MAP CANVAS
+       Mapbox renders WebGL output into this single div. All other
+       UI is layered ABOVE it via fixed/absolute positioning in
+       style.css. The map is initialized in script.js → init().
+       ============================================================ -->
   <div id="map"></div>
 
-  <!-- INTRO / LANDING CARD -->
+  <!-- ============================================================
+       2. INTRO / LANDING CARD
+       Full-screen "title page" overlay shown on first load.
+       Provides:
+         · TITLE        — "PAINTED CITY"
+         · DESCRIPTION  — what the site is + dataset framing
+         · CALL TO ACTION — two buttons that dismiss the intro
+                             and either (a) play the cinematic
+                             flyTo, or (b) jump to a random artwork
+       Adds the `.hidden` class via JS to fade out & let the user
+       interact with the map.
+       ============================================================ -->
   <section class="intro" id="intro">
     <div class="intro-inner">
       <div class="eyebrow">A Narrative Cartography</div>
@@ -37,13 +82,21 @@
     </div>
   </section>
 
-  <!-- LEFT SIDEBAR -->
+  <!-- ============================================================
+       3. LEFT SIDEBAR — search, filters, list of works
+       Three filter axes (borough / type / era) + free-text search.
+       Each chip carries a `data-*` attribute that script.js reads
+       to drive the GeoJSON filter expression on the Mapbox source.
+       The list below shows up to 300 matches; clicking any row
+       flies the camera to that artwork and opens the detail panel.
+       ============================================================ -->
   <aside class="sidebar" id="sidebar">
     <header class="sidebar-header">
       <div class="sidebar-title">PAINTED CITY</div>
       <button class="collapse" id="collapseBtn" title="Collapse">×</button>
     </header>
 
+    <!-- Free-text search across title / artist / borough / location / type / year -->
     <div class="search-wrap">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
         <circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>
@@ -52,6 +105,8 @@
       <button class="clear-search" id="clearSearch" title="Clear">×</button>
     </div>
 
+    <!-- Filter chips — single-select within each group. The active chip
+         drives state.borough / state.type / state.era in script.js. -->
     <div class="filters">
       <div class="filter-label">BOROUGH</div>
       <div class="chip-row" id="boroughChips">
@@ -84,42 +139,65 @@
       </div>
     </div>
 
+    <!-- Live count + a tiny shuffle button (alt path to "surprise me") -->
     <div class="count-line">
       <span id="count">0</span> works on view
       <button class="shuffle-mini" id="shuffleBtn" title="Surprise me">↻ shuffle</button>
     </div>
 
+    <!-- Filtered list of artworks. Populated dynamically in script.js → renderList(). -->
     <div class="list" id="list"></div>
   </aside>
 
+  <!-- Re-open button shown when sidebar is collapsed -->
   <button class="reopen" id="reopenBtn" title="Open sidebar">☰</button>
 
-  <!-- DETAIL PANEL -->
+  <!-- ============================================================
+       4. DETAIL PANEL — slides in from the right when a pin is clicked
+       Contents are populated by script.js → showDetail(). All fields
+       are read from the artwork record's properties; missing fields
+       are gracefully hidden.
+       ============================================================ -->
   <aside class="detail" id="detail">
     <button class="detail-close" id="detailClose" title="Close">×</button>
+
+    <!-- Image area: shows artwork image_url if available; otherwise
+         a color-tinted placeholder (handled in JS via .hidden class). -->
     <div class="detail-img-wrap" id="detailImgWrap">
       <div class="detail-img-placeholder" id="detailPlaceholder"></div>
       <img class="detail-img" id="detailImg" alt="" />
     </div>
+
     <div class="detail-body">
+      <!-- Eyebrow takes the type's color via inline style set in JS -->
       <div class="detail-eyebrow" id="detailType">SCULPTURE</div>
       <h2 class="detail-title" id="detailTitle">Title</h2>
       <div class="detail-artist" id="detailArtist">Artist · Year</div>
       <div class="detail-location" id="detailLocation">Location</div>
 
+      <!-- Description — long-form text from the dataset -->
       <p class="detail-desc" id="detailDesc"></p>
 
+      <!-- Optional: artist statement (curated entries only) -->
       <blockquote class="detail-statement" id="detailStatement"></blockquote>
 
+      <!-- Definition list — materials / dimensions / sponsor / etc. -->
       <dl class="detail-meta" id="detailMeta"></dl>
 
+      <!-- External link to original source (Wikipedia, NYC Parks page, etc.) -->
       <a class="detail-source" id="detailSource" target="_blank" rel="noopener">
         View source ↗
       </a>
     </div>
   </aside>
 
-  <!-- LEGEND -->
+  <!-- ============================================================
+       5. LEGEND
+       Maps each artwork TYPE to its color + Blossom icon. The icons
+       are CSS-masked SVGs, so the color comes from `background` and
+       the shape comes from the masked image. This must stay in sync
+       with the BLOSSOM_ICONS table in script.js.
+       ============================================================ -->
   <div class="legend">
     <div class="legend-title">TYPE</div>
     <div class="legend-row"><span class="legend-icon" style="background:#ffb84d;-webkit-mask:url(icons/blossom-01.svg) center/contain no-repeat;mask:url(icons/blossom-01.svg) center/contain no-repeat;"></span>Sculpture</div>
@@ -130,17 +208,30 @@
     <div class="legend-row"><span class="legend-icon" style="background:#ffd27a;-webkit-mask:url(icons/blossom-06.svg) center/contain no-repeat;mask:url(icons/blossom-06.svg) center/contain no-repeat;"></span>Relief</div>
   </div>
 
-  <!-- LOADING -->
+  <!-- ============================================================
+       6. LOADING SPINNER
+       Shown until artworks.json finishes downloading + the map's
+       'load' event fires. Hidden via .hidden class in script.js.
+       ============================================================ -->
   <div class="loading" id="loading">
     <div class="loader"></div>
     <div class="loading-text">loading 1,400+ artworks…</div>
   </div>
 
-  <!-- DEMO CAPTION OVERLAY -->
+  <!-- ============================================================
+       7. DEMO MODE OVERLAYS
+       When the URL contains ?demo=1, script.js → runDemo() takes
+       over the UI and walks through every feature on autoplay.
+       These two elements are the visual support for that tour:
+         · demoCaption — large narrating headline at the top of screen
+         · demoBadge   — "press ESC to exit" pill at top-right
+       ============================================================ -->
   <div class="demo-caption" id="demoCaption"></div>
   <div class="demo-badge" id="demoBadge">● AUTO-TOUR · press ESC to exit</div>
 
+  <!-- Mapbox GL JS itself (loads before our script so `mapboxgl` is global) -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.js"></script>
+  <!-- Our application code -->
   <script src="script.js"></script>
 </body>
 </html>

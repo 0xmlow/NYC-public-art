@@ -1,6 +1,25 @@
+/* ============================================================
+   PAINTED CITY — Stylesheet
+   ------------------------------------------------------------
+   Sections (in order below):
+     1. CSS custom properties (theme tokens)
+     2. Global resets + typography
+     3. Map canvas + Mapbox control overrides
+     4. Intro / landing card (full-screen overlay)
+     5. Sidebar — search, filter chips, list of works
+     6. Reopen button (sidebar collapsed state)
+     7. Detail panel (slides in from right)
+     8. Legend (bottom-left, type → icon mapping)
+     9. Loading spinner
+    10. Mapbox popup restyle
+    11. Demo mode overlays
+    12. Responsive breakpoints (≤900px)
+   ============================================================ */
+
+/* 1. THEME TOKENS — change here to retheme the entire site */
 :root {
-  --bg: #0a0a0f;
-  --panel: rgba(14, 14, 22, 0.88);
+  --bg: #0a0a0f;                                /* page background */
+  --panel: rgba(14, 14, 22, 0.88);              /* glass-effect panel bg */
   --panel-solid: #0e0e16;
   --panel-elevated: #14141d;
   --border: rgba(255, 255, 255, 0.08);
@@ -8,10 +27,10 @@
   --text: #f4f4f6;
   --text-dim: #c8c8d2;
   --muted: #8a8a98;
-  --accent-1: #ff5e7e;   /* pink - murals */
-  --accent-2: #ffb84d;   /* orange - sculpture */
-  --accent-3: #4de1c2;   /* teal - installation */
-  --accent-4: #c9a7ff;   /* purple - plaque/other */
+  --accent-1: #ff5e7e;   /* pink   — murals      */
+  --accent-2: #ffb84d;   /* amber  — sculpture   */
+  --accent-3: #4de1c2;   /* teal   — installation*/
+  --accent-4: #c9a7ff;   /* lilac  — plaque/other*/
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -637,13 +656,6 @@ html, body {
   margin-bottom: 4px;
 }
 .legend-row:last-child { margin-bottom: 0; }
-.legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 8px;
-  box-shadow: 0 0 0 1.5px rgba(255,255,255,0.6);
-}
 .legend-icon {
   display: inline-block;
   width: 16px;
