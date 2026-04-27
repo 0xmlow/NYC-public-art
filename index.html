@@ -184,10 +184,19 @@
       <!-- Definition list — materials / dimensions / sponsor / etc. -->
       <dl class="detail-meta" id="detailMeta"></dl>
 
-      <!-- External link to original source (Wikipedia, NYC Parks page, etc.) -->
-      <a class="detail-source" id="detailSource" target="_blank" rel="noopener">
-        View source ↗
-      </a>
+      <!-- Source links:
+             · detailSource — primary link (usually Wikipedia search)
+             · detailParks  — fallback link to the NYC Parks per-monument
+                               page; only shown for parks entries that
+                               carry a parks_link in the dataset -->
+      <div class="detail-links">
+        <a class="detail-source" id="detailSource" target="_blank" rel="noopener">
+          View source ↗
+        </a>
+        <a class="detail-source detail-source-ghost" id="detailParks" target="_blank" rel="noopener" style="display:none">
+          NYC Parks page ↗
+        </a>
+      </div>
     </div>
   </aside>
 

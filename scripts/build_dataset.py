@@ -172,8 +172,19 @@ def load_parks_monuments():
             extant = clean(row.get("extant")).upper()
             status = "Extant" if extant in ("Y", "YES", "TRUE", "1") else ("Removed" if extant in ("N", "NO") else "Unknown")
 
+            # Build the official NYC Parks per-monument URL when both
+            # the park number and monument number are present. This is
+            # only useful as a fallback — the parks site currently
+            # bot-blocks (403), but real-browser traffic *can* still
+            # get through, and they may relax the block in the future.
+            parknumber = clean(row.get("parknumber"))
+            number = clean(row.get("number"))
+            parks_link = ""
+            if parknumber and number:
+                parks_link = f"https://www.nycgovparks.org/parks/{parknumber}/monuments/{number}"
+
             items.append({
-                "id": f"parks-{row.get('number') or row.get('fileorder') or len(items)}",
+                "id": f"parks-{number or row.get('fileorder') or len(items)}",
                 "source": "NYC Parks Monuments",
                 "title": name,
                 "artist": artist,
@@ -191,14 +202,14 @@ def load_parks_monuments():
                 "inscription": clean(row.get("inscribed"))[:500],
                 "status": status,
                 "image_url": "",
-                # Wikipedia search URL — far more useful than a generic
-                # parks index, and avoids 403 issues from nycgovparks.org's
-                # bot-detection. Lands on the article if one exists, or
-                # search results otherwise.
+                # Primary "View source" target — Wikipedia search.
+                # Always lands somewhere useful regardless of upstream uptime.
                 "source_link": (
                     "https://en.wikipedia.org/w/index.php?search="
-                    + urllib.parse.quote(f"{title} {artist} New York".strip())
+                    + urllib.parse.quote(f"{name} {artist} New York".strip())
                 ),
+                # Secondary fallback — official NYC Parks per-monument page.
+                "parks_link": parks_link,
             })
     return items
 

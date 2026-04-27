@@ -276,6 +276,17 @@ function showDetail(art) {
     link.style.display = 'none';
   }
 
+  // Secondary fallback link to the NYC Parks per-monument page.
+  // Only shown for entries that carry a parks_link in the dataset
+  // (parks-sourced entries with a known parknumber + monument number).
+  const parksLink = $('detailParks');
+  if (art.parks_link) {
+    parksLink.href = art.parks_link;
+    parksLink.style.display = 'inline-block';
+  } else {
+    parksLink.style.display = 'none';
+  }
+
   panel.classList.add('visible');
 }
 

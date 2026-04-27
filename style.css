@@ -624,6 +624,25 @@ html, body {
 }
 .detail-source:hover { background: var(--accent-3); color: #0a0a0f; }
 
+/* Container for the two source links — wraps to a new line on narrow panels */
+.detail-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+/* Secondary "ghost" treatment for the parks-link fallback button —
+   muted so it visually defers to the primary "Look up on Wikipedia" CTA */
+.detail-source-ghost {
+  color: var(--muted);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.detail-source-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
 /* ========================== LEGEND ========================== */
 .legend {
   position: absolute;
