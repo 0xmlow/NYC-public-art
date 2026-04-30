@@ -134,6 +134,39 @@ function applyFilters() {
   updateMapFilter();
   renderList();
   $('count').textContent = state.filtered.length.toLocaleString();
+  updateFilterSummary();
+}
+
+// Renders the inline summary of active filters next to the "Filters"
+// header, and toggles the visibility of the Reset button. Called every
+// time applyFilters() runs.
+function updateFilterSummary() {
+  const active = [];
+  if (state.borough !== 'All') active.push(state.borough);
+  if (state.type !== 'All')    active.push(state.type);
+  if (state.era !== 'All') {
+    const labels = { pre1900: 'Pre-1900', '1900-1949': '1900–1949',
+                     '1950-1999': '1950–1999', '2000+': '2000+' };
+    active.push(labels[state.era] || state.era);
+  }
+  const summary = $('filtersSummary');
+  if (summary) summary.textContent = active.length ? '· ' + active.join(' · ') : '';
+  const reset = $('filtersReset');
+  if (reset) reset.classList.toggle('visible', active.length > 0);
+}
+
+// Reset every filter to "All" without clearing the search query.
+function resetAllFilters() {
+  state.borough = 'All';
+  state.type = 'All';
+  state.era = 'All';
+  document.querySelectorAll('#boroughChips .chip').forEach(c =>
+    c.classList.toggle('active', c.getAttribute('data-borough') === 'All'));
+  document.querySelectorAll('#typeChips .chip').forEach(c =>
+    c.classList.toggle('active', c.getAttribute('data-type') === 'All'));
+  document.querySelectorAll('#eraChips .chip').forEach(c =>
+    c.classList.toggle('active', c.getAttribute('data-era') === 'All'));
+  applyFilters();
 }
 
 function toFeature(a) {
@@ -429,6 +462,19 @@ function bindUI() {
   $('enterBtn').addEventListener('click', enterGallery);
   $('surpriseBtn').addEventListener('click', surpriseMe);
   $('shuffleBtn').addEventListener('click', surpriseMe);
+
+  // Reset button — only visible when at least one filter is non-default.
+  // Wired here instead of inline because the button lives inside the
+  // <details> summary's expanded body and we want to stop the click
+  // from also toggling the panel closed.
+  const resetBtn = $('filtersReset');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resetAllFilters();
+    });
+  }
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -762,7 +808,17 @@ async function init() {
     zoom: 9.4,
     pitch: 0,
     bearing: 0,
-    antialias: true
+    antialias: true,
+    // ── Geographic guardrails ───────────────────────────────
+    // Hard-limit the camera so users can never wander off NYC.
+    // Bbox padded ~0.2° around the five-borough envelope so the
+    // mask outline + a comfortable harbor margin stay visible.
+    maxBounds: [
+      [-74.45, 40.40],   // SW corner (lon, lat) — west of Staten Island
+      [-73.50, 41.00]    //  NE corner          — east of Bronx
+    ],
+    minZoom: 9.2,        // can't zoom out past 'all of NYC visible'
+    maxZoom: 19          // Mapbox max for the streets source
   });
 
   state.map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');

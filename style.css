@@ -276,33 +276,88 @@ html, body {
 .clear-search:hover { background: rgba(255,255,255,0.2); color: var(--text); }
 
 /* Filters */
-.filters { padding: 12px 22px 8px; border-bottom: 1px solid var(--border); }
+/* Filters block — uses native <details> so the user can collapse the
+   whole panel and give the list of artworks more vertical breathing
+   room. The default state is open. */
+.filters {
+  padding: 0 22px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.filters[open] { padding-top: 4px; }
+
+/* The clickable header that toggles open/closed. List-style:none
+   hides the default disclosure arrow; we render our own chevron. */
+.filters-toggle {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.filters-toggle::-webkit-details-marker { display: none; }
+.filters-toggle:hover { color: var(--text); }
+
+.filters-toggle-label { font-weight: 600; color: var(--text-dim); }
+
+/* Compact pill summary of active filters, shown inline next to the
+   "Filters" label. Only renders when the panel is closed AND at
+   least one filter is non-default. Driven by JS → updateFilterSummary */
+.filters-summary {
+  flex: 1;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  text-transform: none;
+  color: var(--accent-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Chevron rotates when the details element is open */
+.filters-chevron {
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+.filters[open] .filters-chevron { transform: rotate(180deg); }
 
 .filter-label {
   font-family: 'Space Mono', monospace;
   font-size: 10px;
   letter-spacing: 1.5px;
   color: var(--muted);
-  margin: 10px 0 8px;
+  margin: 6px 0 6px;
   text-transform: uppercase;
 }
-.filter-label:first-child { margin-top: 2px; }
+.filter-label:first-of-type { margin-top: 0; }
 
 .chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 2px;
+  gap: 4px;
+  margin-bottom: 0;
 }
 
+/* Tighter chips than before — same readable size but ~30% less
+   vertical footprint across all three filter rows. */
 .chip {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
   background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
   border: 1px solid var(--border);
-  padding: 5px 11px;
+  padding: 3px 9px;
   border-radius: 100px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -315,6 +370,26 @@ html, body {
   font-weight: 600;
   border-color: transparent;
 }
+
+/* Tiny ghost button that resets every filter back to "All". Hidden
+   by default (only shown when the user has selected at least one
+   non-default filter — toggled in JS). */
+.filters-reset {
+  display: none;
+  margin-top: 10px;
+  background: none;
+  border: 1px dashed var(--border-strong);
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filters-reset.visible { display: inline-block; }
+.filters-reset:hover { color: var(--accent-1); border-color: var(--accent-1); }
 
 .count-line {
   padding: 12px 22px;

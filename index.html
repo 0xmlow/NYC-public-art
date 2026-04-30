@@ -107,7 +107,20 @@
 
     <!-- Filter chips — single-select within each group. The active chip
          drives state.borough / state.type / state.era in script.js. -->
-    <div class="filters">
+    <!--
+      Collapsible filters. Native <details>/<summary> gives us free
+      keyboard accessibility + open/close state without extra JS.
+      When closed, the chip rows hide and a compact summary of any
+      active filters renders inline so the user still knows what's
+      applied.
+    -->
+    <details class="filters" id="filters" open>
+      <summary class="filters-toggle">
+        <span class="filters-toggle-label">Filters</span>
+        <span class="filters-summary" id="filtersSummary"></span>
+        <span class="filters-chevron" aria-hidden="true">▾</span>
+      </summary>
+
       <div class="filter-label">BOROUGH</div>
       <div class="chip-row" id="boroughChips">
         <button class="chip active" data-borough="All">All</button>
@@ -137,7 +150,9 @@
         <button class="chip" data-era="1950-1999">1950–1999</button>
         <button class="chip" data-era="2000+">2000+</button>
       </div>
-    </div>
+
+      <button class="filters-reset" id="filtersReset" type="button" title="Clear all filters">↺ Reset</button>
+    </details>
 
     <!-- Live count + a tiny shuffle button (alt path to "surprise me") -->
     <div class="count-line">
