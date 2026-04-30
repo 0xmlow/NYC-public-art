@@ -37,7 +37,7 @@ except Exception:
         SSL_CTX = ssl._create_unverified_context()
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA = ROOT / "data" / "artworks.json"
+DATA = ROOT / "public" / "data" / "artworks.json"
 
 UA = "PaintedCity/1.0 (https://0xmlow.github.io/NYC-public-art/; 0xmlow@users.noreply.github.com)"
 

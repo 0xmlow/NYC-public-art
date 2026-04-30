@@ -39,7 +39,7 @@ jobs:
         run: |
           git config user.name "painted-city-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add data/artworks.json data/painted_city_dataset.xlsx data/nyc_mask.json
+          git add public/data/artworks.json public/data/painted_city_dataset.xlsx public/data/nyc_mask.json
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else

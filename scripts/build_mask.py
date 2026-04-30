@@ -15,7 +15,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "data" / "nyc_mask.json"
+OUT = ROOT / "public" / "data" / "nyc_mask.json"
 
 # NYC borough boundaries (clipped to water). Sourced from dwillis/nyc-maps
 # which mirrors NYC DCP / NYC Open Data boundary files.
