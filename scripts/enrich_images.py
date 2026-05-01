@@ -151,26 +151,60 @@ def commons_image(query: str) -> str | None:
     return url
 
 
+# Words too generic to count as distinctive when validating that an
+# image actually depicts the right subject.
+_STOPWORDS = {
+    "the", "and", "for", "with", "from", "fountain", "memorial", "plaque",
+    "bench", "tablet", "bust", "sign", "signage", "mural", "statue",
+    "monument", "sculpture", "inscription", "park", "avenue", "street",
+    "place", "square", "building", "house", "wall", "panel", "relief",
+    "this", "that", "their", "unknown", "artist", "york", "city", "new",
+    "public", "art", "works", "work", "drinking",
+}
+
+
+def _title_tokens(s: str) -> set[str]:
+    out = set()
+    for ch in s.lower():
+        pass
+    cleaned = "".join(c if c.isalnum() else " " for c in s.lower())
+    for w in cleaned.split():
+        if len(w) >= 4 and w not in _STOPWORDS:
+            out.add(w)
+    return out
+
+
+def _validates(url: str, title: str) -> bool:
+    """A Wikimedia image filename is named after its subject. If the
+    artwork's title shares no distinctive token with the filename,
+    the match is almost certainly junk (e.g. 'Drinking Fountain' →
+    aerial photo of Central Park)."""
+    tokens = _title_tokens(title)
+    if not tokens:
+        return True  # nothing distinctive to check; let it through
+    leaf = urllib.parse.unquote(url.split("?", 1)[0]).rsplit("/", 1)[-1].lower()
+    if leaf.startswith(("640px-", "960px-", "1024px-")):
+        leaf = leaf.split("-", 1)[1]
+    return any(t in leaf for t in tokens)
+
+
 def find_image(art: dict) -> tuple[str, str | None]:
     aid = art["id"]
+    title = art.get("title", "")
     # Pass 1: strict (title + artist + borough)
     query = build_query(art)
     if len(query) >= 4:
-        url = wikipedia_image(query)
-        if url:
-            return aid, url
-        url = commons_image(query)
-        if url:
-            return aid, url
+        for fetcher in (wikipedia_image, commons_image):
+            url = fetcher(query)
+            if url and _validates(url, title):
+                return aid, url
     # Pass 2: loose (title + borough + NYC, no artist)
     query2 = build_query_loose(art)
     if query2 != query and len(query2) >= 4:
-        url = wikipedia_image(query2)
-        if url:
-            return aid, url
-        url = commons_image(query2)
-        if url:
-            return aid, url
+        for fetcher in (wikipedia_image, commons_image):
+            url = fetcher(query2)
+            if url and _validates(url, title):
+                return aid, url
     return aid, None
 
 
