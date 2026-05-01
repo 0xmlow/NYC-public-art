@@ -13,6 +13,7 @@ limits when requests include a User-Agent.
 from __future__ import annotations
 
 import json
+import os
 import ssl
 import sys
 import time
@@ -43,6 +44,9 @@ UA = "PaintedCity/1.0 (https://0xmlow.github.io/NYC-public-art/; 0xmlow@users.no
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+FLICKR_API = "https://api.flickr.com/services/rest/"
+FLICKR_KEY = os.environ.get("FLICKR_API_KEY", "").strip()
+FLICKR_LICENSES = "4,5,6,7,9,10"  # CC-BY, CC-BY-SA, CC-BY-ND, no-restrictions, CC0, PDM
 
 
 def http_json(url: str, params: dict, timeout: float = 15.0, retries: int = 3) -> dict | None:
@@ -188,23 +192,110 @@ def _validates(url: str, title: str) -> bool:
     return any(t in leaf for t in tokens)
 
 
+def commons_geo_image(lat: float, lon: float, radius_m: int = 250) -> list[tuple[str, str]]:
+    """Wikimedia Commons geosearch — finds files whose embedded geotag
+    is within radius_m of (lat, lon). Returns [(url, filename), ...]
+    sorted by Commons' default (distance ascending)."""
+    data = http_json(
+        COMMONS_API,
+        {
+            "action": "query",
+            "format": "json",
+            "list": "geosearch",
+            "gscoord": f"{lat}|{lon}",
+            "gsradius": str(radius_m),
+            "gslimit": "20",
+            "gsnamespace": "6",  # File: namespace
+        },
+    )
+    out: list[tuple[str, str]] = []
+    if not data:
+        return out
+    for h in (data.get("query") or {}).get("geosearch", []):
+        title = h.get("title", "")
+        if not title.startswith("File:"):
+            continue
+        lower = title.lower()
+        if not any(lower.endswith(e) for e in (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff")):
+            continue
+        filename = title[len("File:"):]
+        url = (
+            "https://commons.wikimedia.org/wiki/Special:FilePath/"
+            + urllib.parse.quote(filename) + "?width=640"
+        )
+        out.append((url, filename))
+    return out
+
+
+def flickr_geo_image(art: dict) -> str | None:
+    """Flickr photos.search restricted to CC-licensed photos within
+    a small geographic window of the artwork. Requires FLICKR_API_KEY
+    in the environment."""
+    if not FLICKR_KEY:
+        return None
+    lat, lon = art.get("lat"), art.get("lon")
+    if lat is None or lon is None:
+        return None
+    data = http_json(
+        FLICKR_API,
+        {
+            "method": "flickr.photos.search",
+            "api_key": FLICKR_KEY,
+            "lat": str(lat),
+            "lon": str(lon),
+            "radius": "0.3",       # km
+            "radius_units": "km",
+            "text": art.get("title", "")[:80],
+            "license": FLICKR_LICENSES,
+            "content_type": "1",   # photos only
+            "media": "photos",
+            "sort": "relevance",
+            "per_page": "5",
+            "format": "json",
+            "nojsoncallback": "1",
+            "extras": "url_l,url_z,url_m,license,owner_name",
+        },
+    )
+    if not data:
+        return None
+    photos = ((data.get("photos") or {}).get("photo") or [])
+    title_tokens = _title_tokens(art.get("title", ""))
+    for p in photos:
+        photo_title = (p.get("title") or "").lower()
+        # Validate: photo's own title should share a distinctive token.
+        if not title_tokens or any(t in photo_title for t in title_tokens):
+            return p.get("url_l") or p.get("url_z") or p.get("url_m")
+    return None
+
+
 def find_image(art: dict) -> tuple[str, str | None]:
     aid = art["id"]
     title = art.get("title", "")
-    # Pass 1: strict (title + artist + borough)
+    # Pass 1: strict text query (title + artist + borough)
     query = build_query(art)
     if len(query) >= 4:
         for fetcher in (wikipedia_image, commons_image):
             url = fetcher(query)
             if url and _validates(url, title):
                 return aid, url
-    # Pass 2: loose (title + borough + NYC, no artist)
+    # Pass 2: loose text query (drop artist, add NYC)
     query2 = build_query_loose(art)
     if query2 != query and len(query2) >= 4:
         for fetcher in (wikipedia_image, commons_image):
             url = fetcher(query2)
             if url and _validates(url, title):
                 return aid, url
+    # Pass 3: Commons geosearch — geotagged Commons files within ~250m
+    lat, lon = art.get("lat"), art.get("lon")
+    if lat is not None and lon is not None:
+        for url, filename in commons_geo_image(lat, lon, 250):
+            if _validates(url, title):
+                return aid, url
+    # Pass 4 (optional): Flickr CC search — needs FLICKR_API_KEY env var
+    if FLICKR_KEY:
+        url = flickr_geo_image(art)
+        if url:
+            return aid, url
     return aid, None
 
 
