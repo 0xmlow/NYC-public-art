@@ -15,6 +15,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Map as MapboxMap } from 'mapbox-gl';
 import { useMap, artworkToFeature } from './hooks/useMap';
 import { useArtworks } from './hooks/useArtworks';
+import { useDemo } from './hooks/useDemo';
 import { filtersReducer, initialFilters } from './state/filtersReducer';
 import { filterArtworks, isCurated } from './utils/filter';
 import { Intro } from './components/Intro';
@@ -22,6 +23,7 @@ import { Sidebar } from './components/Sidebar';
 import { DetailPanel } from './components/DetailPanel';
 import { Legend } from './components/Legend';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { DemoOverlay } from './components/DemoOverlay';
 
 export default function App() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -146,9 +148,30 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered, artworks]);
 
+  // Demo mode — auto-runs a scripted tour when ?demo=1 is in the URL.
+  const demoEnabled =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('demo') === '1';
+  const { caption: demoCaption, running: demoRunning } = useDemo({
+    enabled: demoEnabled,
+    mapRef,
+    artworks,
+    isReady,
+    onEnterGallery: handleEnterGallery,
+    onSelect: handleSelect,
+    onSurprise: handleSurprise,
+    onSetType: (t) => dispatch({ type: 'setType', value: t }),
+    onSetBorough: (b) => dispatch({ type: 'setBorough', value: b }),
+    onSetQuery: (q) => dispatch({ type: 'setQuery', value: q }),
+    onResetFilters: () => dispatch({ type: 'resetFiltersOnly' }),
+    onCloseDetail: () => setActiveId(null),
+  });
+
   return (
     <>
       <div id="map" ref={mapContainerRef} />
+
+      <DemoOverlay caption={demoCaption} running={demoRunning} />
 
       <Intro
         hidden={introHidden}
