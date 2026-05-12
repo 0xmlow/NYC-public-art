@@ -44,6 +44,11 @@ UA = "PaintedCity/1.0 (https://0xmlow.github.io/NYC-public-art/; 0xmlow@users.no
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+# OpenVerse — free CC-search aggregator (Flickr-CC, Commons, Europeana,
+# etc.) maintained by WordPress.org. No API key required for basic use.
+OPENVERSE_API = "https://api.openverse.org/v1/images/"
+# Flickr is kept as an optional pass for completeness; activates only when
+# FLICKR_API_KEY is set in the environment.
 FLICKR_API = "https://api.flickr.com/services/rest/"
 FLICKR_KEY = os.environ.get("FLICKR_API_KEY", "").strip()
 FLICKR_LICENSES = "4,5,6,7,9,10"  # CC-BY, CC-BY-SA, CC-BY-ND, no-restrictions, CC0, PDM
@@ -227,6 +232,46 @@ def commons_geo_image(lat: float, lon: float, radius_m: int = 250) -> list[tuple
     return out
 
 
+def openverse_image(art: dict) -> str | None:
+    """OpenVerse text search across all CC-licensed images. No key needed.
+    Validates results by checking that the photo's own title shares a
+    distinctive token with the artwork's title."""
+    title = (art.get("title") or "").strip()
+    if len(title) < 3:
+        return None
+    artist = (art.get("artist") or "").strip()
+    parts = [title]
+    if artist and artist.lower() != "unknown artist":
+        parts.append(artist)
+    parts.append("New York")
+    query = " ".join(parts)
+    data = http_json(
+        OPENVERSE_API,
+        {
+            "q": query,
+            "page_size": "8",
+            "category": "photograph",
+        },
+    )
+    if not data:
+        return None
+    results = data.get("results") or []
+    tokens = _title_tokens(title)
+    for r in results:
+        url = r.get("url") or ""
+        if not url:
+            continue
+        photo_title = (r.get("title") or "").lower()
+        # If the artwork has distinctive tokens, the photo's title (or
+        # the filename) must contain at least one for us to trust it.
+        if not tokens:
+            return url
+        haystack = photo_title + " " + url.lower()
+        if any(t in haystack for t in tokens):
+            return url
+    return None
+
+
 def flickr_geo_image(art: dict) -> str | None:
     """Flickr photos.search restricted to CC-licensed photos within
     a small geographic window of the artwork. Requires FLICKR_API_KEY
@@ -291,7 +336,12 @@ def find_image(art: dict) -> tuple[str, str | None]:
         for url, filename in commons_geo_image(lat, lon, 250):
             if _validates(url, title):
                 return aid, url
-    # Pass 4 (optional): Flickr CC search — needs FLICKR_API_KEY env var
+    # Pass 4: OpenVerse — free CC-aggregator across Flickr / Commons /
+    # Europeana etc. (the meaty fallback that doesn't need an API key).
+    url = openverse_image(art)
+    if url and _validates(url, title):
+        return aid, url
+    # Pass 5 (optional): Flickr direct — only if FLICKR_API_KEY env var set
     if FLICKR_KEY:
         url = flickr_geo_image(art)
         if url:
