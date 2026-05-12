@@ -8,6 +8,8 @@
 import type { FiltersState } from '../state/filtersReducer';
 import { hasActiveFilters } from '../state/filtersReducer';
 import type { Borough, EraBucket, TypeFilter } from '../types';
+import { configFor } from '../utils/icons';
+import { asset } from '../utils/asset';
 
 interface Props {
   state: FiltersState;
@@ -42,8 +44,11 @@ export function Filters({ state, onSetBorough, onSetType, onSetEra, onReset }: P
   if (state.era !== 'All') active.push(ERA_LABEL[state.era]);
   const summary = active.length ? '· ' + active.join(' · ') : '';
 
+  // Default-collapsed so the artwork list gets the screen real-estate
+  // immediately. The toggle row still surfaces any active filters
+  // inline ("· Manhattan · Mural") so the user knows what's applied.
   return (
-    <details className="filters" open>
+    <details className="filters">
       <summary className="filters-toggle">
         <span className="filters-toggle-label">Filters</span>
         <span className="filters-summary">{summary}</span>
@@ -67,15 +72,30 @@ export function Filters({ state, onSetBorough, onSetType, onSetEra, onReset }: P
 
       <div className="filter-label">TYPE</div>
       <div className="chip-row">
-        {TYPES.map((t) => (
-          <button
-            key={t}
-            className={`chip ${state.type === t ? 'active' : ''}`}
-            onClick={() => onSetType(t)}
-          >
-            {t}
-          </button>
-        ))}
+        {TYPES.map((t) => {
+          // 'All' is the only one without an associated Blossom icon —
+          // every real type maps to one of the 7 brand glyphs via configFor.
+          const cfg = t === 'All' ? null : configFor(t);
+          return (
+            <button
+              key={t}
+              className={`chip ${state.type === t ? 'active' : ''}`}
+              onClick={() => onSetType(t)}
+            >
+              {cfg && (
+                <span
+                  className="chip-icon"
+                  style={{
+                    background: cfg.color,
+                    WebkitMask: `url(${asset(cfg.file)}) center/contain no-repeat`,
+                    mask: `url(${asset(cfg.file)}) center/contain no-repeat`,
+                  }}
+                />
+              )}
+              {t}
+            </button>
+          );
+        })}
       </div>
 
       <div className="filter-label">ERA</div>

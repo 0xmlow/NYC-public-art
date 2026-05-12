@@ -76,6 +76,10 @@ export default function App() {
   }, [isReady, artworks, mapRef]);
 
   // ── Selection / camera control ──
+  // Pin click flies the camera to the artwork. Bearing locked to 0
+  // (north-up) so the user keeps their orientation; a moderate pitch
+  // still surfaces the 3D buildings at close zoom without being
+  // disorienting.
   function handleSelect(id: string) {
     setActiveId(id);
     setIntroHidden(true);
@@ -83,9 +87,9 @@ export default function App() {
     if (art && mapRef.current) {
       mapRef.current.flyTo({
         center: [art.lon, art.lat],
-        zoom: 16.5,
-        pitch: 55,
-        bearing: -18,
+        zoom: 16,
+        pitch: 35,
+        bearing: 0,
         speed: 1.2,
         curve: 1.4,
         essential: true,
@@ -93,28 +97,24 @@ export default function App() {
     }
   }
 
+  // Intro flyTo — a single slow zoom-in from a wide NYC view to
+  // a Manhattan-centered framing. No pitch, no bearing — gives the
+  // user the standard north-up NYC orientation they expect. The
+  // built-in NavigationControl exposes pitch / rotate for anyone
+  // who wants to tilt the map themselves.
   function handleEnterGallery() {
     setIntroHidden(true);
     const map = mapRef.current;
     if (!map) return;
     map.flyTo({
-      center: [-74.0445, 40.6892],
-      zoom: 13.2,
-      pitch: 65,
-      bearing: 20,
-      duration: 3200,
+      center: [-73.97, 40.74],
+      zoom: 11.6,
+      pitch: 0,
+      bearing: 0,
+      duration: 4500,
+      curve: 1.2,
       essential: true,
     });
-    setTimeout(() => {
-      mapRef.current?.flyTo({
-        center: [-73.9857, 40.7484],
-        zoom: 12.0,
-        pitch: 56,
-        bearing: -15,
-        duration: 4200,
-        essential: true,
-      });
-    }, 3300);
   }
 
   function handleSurprise() {

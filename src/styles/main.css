@@ -380,6 +380,20 @@ html, body {
   font-weight: 600;
   border-color: transparent;
 }
+/* Small Blossom icon prefix on type-filter chips — same CSS-mask
+   trick as the legend so the icon color comes from `background` and
+   the shape comes from the masked SVG. */
+.chip-icon {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  flex-shrink: 0;
+}
+/* On active chips, swap the icon's bright color for the chip's dark
+   text color so it stays legible against the gradient background. */
+.chip.active .chip-icon { background: #0a0a0f !important; }
 
 /* Tiny ghost button that resets every filter back to "All". Hidden
    by default (only shown when the user has selected at least one
