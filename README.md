@@ -46,7 +46,8 @@ A snapshot of the merged data is also published as a spreadsheet at `data/painte
 ## Stack
 
 - **[Mapbox GL JS v3.8](https://docs.mapbox.com/mapbox-gl-js/api/)** — base map (`mapbox/dark-v11`), GeoJSON sources, clustering, symbol/fill/circle/fill-extrusion layers, expression-based data-driven styling, camera control
-- **Vanilla HTML / CSS / JS** — no build step, no framework. Three files (`index.html`, `style.css`, `script.js`) wired together with a single `<script>` tag.
+- **React 18 + TypeScript** — components for every panel (`Map`, `Sidebar`, `Filters`, `DetailPanel`, `Legend`, `Intro`, `LoadingSpinner`); `useReducer` for filter state; a custom `useMap` hook owns the Mapbox lifecycle
+- **Vite 5** — dev server, TypeScript pipeline, production build with code-splitting; `base` is set to `/NYC-public-art/` so it deploys cleanly to GitHub Pages
 - **Python data pipeline** (`scripts/`):
   - `build_dataset.py` — load CSVs, reproject coordinates with `pyproj`, normalize fields, dedupe, write `artworks.json` + `painted_city_dataset.xlsx` (via `openpyxl`)
   - `enrich_images.py` — multi-threaded Wikipedia + Wikimedia Commons API client that finds a thumbnail for every artwork (two-pass strict→loose query strategy)
@@ -77,26 +78,52 @@ This project demonstrates the core Mapbox-GL-JS competencies from the assignment
 
 ```
 .
-├── index.html                       # DOM scaffold — map div + UI overlays
-├── style.css                        # Dark theme, sidebar, panels, animations
-├── script.js                        # Mapbox + UI logic (all interactivity)
-├── README.md                        # this file
-├── data/
-│   ├── artworks.json                # the GeoJSON-friendly artwork dataset (1,436 records, 1.2 MB)
-│   ├── nyc_mask.json                # polygon-with-holes for the NYC spotlight effect
-│   ├── painted_city_dataset.xlsx    # same dataset as a styled spreadsheet
-│   ├── community_additions.json     # merge point for reviewed community submissions
-│   ├── nyc_parks_monuments.csv      # raw NYC Open Data
-│   └── nyc_dot_art.csv              # raw NYC Open Data
-├── icons/
-│   └── blossom-01.svg … 07.svg      # 7 Blossom-brand category icons
+├── index.html                       # Vite entry — mounts <App /> into #root
+├── package.json / vite.config.ts    # Vite + React + TypeScript setup
+├── tsconfig.json
+├── src/
+│   ├── main.tsx                     # ReactDOM.createRoot + <App />
+│   ├── App.tsx                      # composition root, owns reducer + selection state
+│   ├── types.ts                     # Artwork / Borough / EraBucket shared types
+│   ├── hooks/
+│   │   ├── useMap.ts                # Mapbox lifecycle, sources, layers, expressions
+│   │   └── useArtworks.ts           # fetch artworks.json once
+│   ├── state/
+│   │   └── filtersReducer.ts        # useReducer logic for the 3-axis filter
+│   ├── utils/
+│   │   ├── icons.ts                 # type → Blossom icon + color
+│   │   ├── era.ts                   # year → era bucket
+│   │   ├── filter.ts                # apply filter state → filtered Artwork[]
+│   │   └── asset.ts                 # build URLs that respect Vite base
+│   ├── components/
+│   │   ├── Intro.tsx                # title card + CTAs
+│   │   ├── Sidebar.tsx              # composes search / filters / list
+│   │   ├── SearchInput.tsx
+│   │   ├── Filters.tsx              # collapsible chip rows + reset
+│   │   ├── ArtworkList.tsx
+│   │   ├── DetailPanel.tsx          # right-side detail with image + meta
+│   │   ├── Legend.tsx
+│   │   └── LoadingSpinner.tsx
+│   └── styles/main.css              # global stylesheet (dark theme, animations)
+├── public/
+│   ├── data/                        # ↓ all served at /NYC-public-art/data/...
+│   │   ├── artworks.json            # 1,436 records, 1.2 MB
+│   │   ├── nyc_mask.json            # NYC spotlight polygon
+│   │   ├── community_additions.json
+│   │   ├── painted_city_dataset.xlsx
+│   │   ├── nyc_parks_monuments.csv
+│   │   └── nyc_dot_art.csv
+│   └── icons/blossom-01.svg…07.svg  # 7 Blossom-brand category icons
 ├── scripts/
 │   ├── build_dataset.py             # CSV → JSON + XLSX merge pipeline
 │   ├── build_mask.py                # borough boundary fetch + simplify
 │   └── enrich_images.py             # Wikipedia / Commons thumbnail lookup
+├── legacy/                          # original vanilla HTML/CSS/JS (kept for reference)
 └── .github/
-    ├── workflows/update-data.yml    # weekly cron refresh
-    └── ISSUE_TEMPLATE/submit-artwork.yml   # community submission form
+    ├── workflows/
+    │   ├── deploy-pages.yml         # build + deploy on push to main
+    │   └── update-data.yml          # weekly cron refresh
+    └── ISSUE_TEMPLATE/submit-artwork.yml
 ```
 
 ## Run locally
@@ -104,11 +131,16 @@ This project demonstrates the core Mapbox-GL-JS competencies from the assignment
 ```bash
 git clone git@github.com:0xmlow/NYC-public-art.git
 cd NYC-public-art
-python3 -m http.server 8765
-# open http://localhost:8765
+npm install
+npm run dev
+# open http://localhost:8765/NYC-public-art/
 ```
 
-The site is fully static — no API server, no build step. Just an HTTP server pointing at the project root.
+For a production smoke test:
+
+```bash
+npm run build && npm run preview
+```
 
 ## Rebuild the dataset
 

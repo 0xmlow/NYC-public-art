@@ -23,8 +23,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "data"
-OUT_DATA_DIR = ROOT / "data"
+DATA_DIR = ROOT / "public" / "data"
+OUT_DATA_DIR = ROOT / "public" / "data"
 OUT_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # NYC State Plane Long Island (US feet) -> WGS84

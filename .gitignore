@@ -4,3 +4,8 @@ __pycache__/
 *.pyc
 scripts/raw/
 media/
+
+# React port
+node_modules/
+dist/
+*.tsbuildinfo
