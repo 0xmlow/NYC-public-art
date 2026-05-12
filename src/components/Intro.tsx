@@ -35,7 +35,13 @@ export function Intro({ hidden, total, onEnter, onSurprise }: IntroProps) {
         <div className="credit-line">
           Data: NYC Parks Monuments · NYC DOT Art · Curated editorial
           <br />
-          Built with Mapbox GL JS · MLow · 2026
+          Built with Mapbox GL JS by{' '}
+          <a href="https://mlow.xyz" target="_blank" rel="noopener noreferrer">MLow</a>
+          {' · '}
+          <a href="https://twitter.com/degens" target="_blank" rel="noopener noreferrer">@degens</a>
+          {' · '}
+          <a href="https://instagram.com/0xmlow" target="_blank" rel="noopener noreferrer">@0xmlow</a>
+          {' · '}2026
         </div>
       </div>
     </section>

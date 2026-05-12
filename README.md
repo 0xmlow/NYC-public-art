@@ -5,7 +5,7 @@
 **Live site:** https://0xmlow.github.io/NYC-public-art/
 **Repository:** https://github.com/0xmlow/NYC-public-art
 
-Built for *Advanced GIS: Interactive Web Mapping and Spatial Data Visualization* (NYU, SP26).
+Built for *Advanced GIS: Interactive Web Mapping and Spatial Data Visualization* — NYU Wagner Graduate School of Public Service, SP26.
 
 ---
 
@@ -171,11 +171,11 @@ The form captures title, artist, year, borough, type, address, lat/lon, descript
 
 ## Credits
 
-- **Built by** MLow · 2026
+- **Built by** MLow · 2026 — [MLow.xyz](https://mlow.xyz) · [@degens](https://twitter.com/degens) on Twitter · [@0xmlow](https://instagram.com/0xmlow) on Instagram
 - **Data:** NYC Department of Parks & Recreation · NYC DOT Art Program
-- **Imagery:** Wikipedia · Wikimedia Commons (CC-licensed thumbnails)
+- **Imagery:** Wikipedia · Wikimedia Commons · OpenVerse (CC-licensed thumbnails)
 - **Icons:** Blossom Brand assets
-- **Course:** *Advanced GIS: Interactive Web Mapping and Spatial Data Visualization* — NYU Tandon, SP26
+- **Course:** *Advanced GIS: Interactive Web Mapping and Spatial Data Visualization* — NYU Wagner Graduate School of Public Service, SP26
 
 ## License
 
