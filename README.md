@@ -2,7 +2,7 @@
 
 > A narrative cartography of New York City's public art.
 
-**Live site:** https://0xmlow.github.io/NYC-public-art/
+**Live site:** https://publicnyc.art
 **Repository:** https://github.com/0xmlow/NYC-public-art
 
 Built for *Advanced GIS: Interactive Web Mapping and Spatial Data Visualization* — NYU Wagner Graduate School of Public Service, SP26.
